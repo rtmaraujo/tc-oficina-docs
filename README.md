@@ -8,6 +8,7 @@ Cada serviço é um **repositório Git próprio**, com banco, Dockerfile, manife
 - **Ambiente publicado:** `http://44.253.115.185`
 - **Relatório:** [RELATORIO.md](RELATORIO.md) ([PDF](RELATORIO.pdf))
 - **Arquitetura e diagramas:** [ARQUITETURA.md](ARQUITETURA.md)
+- **Relatório de vulnerabilidades:** [relatorio_vulnerabilidade.md](relatorio_vulnerabilidade.md)
 - **Postman:** [postman/](postman/)
 - **Evidências:** [evidencias/](evidencias/)
 
@@ -243,6 +244,7 @@ tc-oficina-docs/
 ├── RELATORIO.md
 ├── RELATORIO.pdf
 ├── ARQUITETURA.md
+├── relatorio_vulnerabilidade.md
 ├── build-pdf.py
 ├── diagrams/
 │   ├── diagrama-arquitetura.mmd
