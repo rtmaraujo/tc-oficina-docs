@@ -308,7 +308,7 @@ O webhook ignora notificações de tipo diferente de `payment` e só muda o orç
 ```mermaid
 flowchart LR
     Dev[Push / PR] --> GH[GitHub Actions]
-    GH --> T[Build + 176 testes + JaCoCo >= 85%]
+    GH --> T[Build + 200 testes + JaCoCo >= 85%]
     T --> S[SonarCloud Quality Gate]
     S -->|main + gate OK| ECR[(Amazon ECR)]
     ECR --> K8S[k3s via SSH<br/>kubectl set image + rollout status]
