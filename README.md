@@ -188,7 +188,7 @@ mvn verify    # testes + jacoco:check (falha abaixo de 85% LINE e BRANCH)
 
 | Pilar | Ferramenta | URL |
 |---|---|---|
-| Métricas | Prometheus | `http://44.253.115.185/prometheus/` |
+| Métricas | Prometheus | `http://44.253.115.185/prometheus/graph` |
 | Dashboards | Grafana | `http://44.253.115.185/grafana/` (admin/admin) |
 | Traces | Zipkin | `http://44.253.115.185/zipkin/` |
 | Saúde | Actuator | `http://44.253.115.185/{os,billing,execution}/actuator/health` |

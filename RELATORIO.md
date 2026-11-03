@@ -229,7 +229,7 @@ A `main` exige PR e o check **Build, testes, cobertura e SonarCloud** aprovado. 
 
 | Pilar | Ferramenta | URL | Situação |
 |---|---|---|---|
-| Métricas | Prometheus | `http://44.253.115.185/prometheus/` | 3 targets `up` |
+| Métricas | Prometheus | `http://44.253.115.185/prometheus/graph` | 3 targets `up` |
 | Dashboards | Grafana | `http://44.253.115.185/grafana/` | dashboard **Oficina Fase 4 - Microsservicos** provisionado |
 | Traces | Zipkin | `http://44.253.115.185/zipkin/` | traces dos 3 serviços |
 | Saúde | Actuator | `/{servico}/actuator/health` | todos `200` |
