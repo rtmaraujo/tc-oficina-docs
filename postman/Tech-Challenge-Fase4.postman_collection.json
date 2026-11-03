@@ -1,0 +1,505 @@
+{
+  "info": {
+    "name": "Tech Challenge - Fase 4 - Oficina Saga",
+    "description": "Colecao de demonstracao da Saga orquestrada da oficina (OS, Billing e Execution). Use o environment 'Tech Challenge - Fase 4 - Local' ou '... - AWS'.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0. Health checks",
+      "item": [
+        {
+          "name": "OS - health",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/os/actuator/health", "host": ["{{baseUrl}}"], "path": ["os", "actuator", "health"] } }
+        },
+        {
+          "name": "Billing - health",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/billing/actuator/health", "host": ["{{baseUrl}}"], "path": ["billing", "actuator", "health"] } }
+        },
+        {
+          "name": "Execution - health",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/execution/actuator/health", "host": ["{{baseUrl}}"], "path": ["execution", "actuator", "health"] } }
+        }
+      ]
+    },
+    {
+      "name": "1. Fluxo feliz da Saga",
+      "item": [
+        {
+          "name": "1.1 Criar OS",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('osId', body.id);",
+                  "pm.collectionVariables.set('osNumero', body.numeroOS);",
+                  "pm.collectionVariables.set('sagaId', 'SAGA-' + body.numeroOS);",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('OS nasce ABERTA', () => pm.expect(body.status).to.eql('ABERTA'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/os/api/os?clienteCpf={{clienteCpf}}&descricao=Revisao completa",
+              "host": ["{{baseUrl}}"],
+              "path": ["os", "api", "os"],
+              "query": [
+                { "key": "clienteCpf", "value": "{{clienteCpf}}" },
+                { "key": "descricao", "value": "Revisao completa" }
+              ]
+            },
+            "description": "Publica os-created. O Billing consome e gera o orcamento automaticamente (status vira ORCAMENTO_GERADO em segundos)."
+          }
+        },
+        {
+          "name": "1.2 Consultar OS (aguardar ORCAMENTO_GERADO)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('orcamento preenchido', () => pm.expect(body.orcamento).to.be.above(0));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/os/api/os/{{osId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["os", "api", "os", "{{osId}}"]
+            }
+          }
+        },
+        {
+          "name": "1.3 Historico da OS",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/os/api/os/{{osId}}/historico",
+              "host": ["{{baseUrl}}"],
+              "path": ["os", "api", "os", "{{osId}}", "historico"]
+            },
+            "description": "Trilha de auditoria de cada transicao de status com o sagaId."
+          }
+        },
+        {
+          "name": "1.4 Buscar orcamento gerado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const lista = pm.response.json();",
+                  "const alvo = lista.filter(o => o.osId === pm.collectionVariables.get('osId')).pop();",
+                  "pm.collectionVariables.set('orcamentoId', alvo.id);",
+                  "pm.test('orcamento encontrado', () => pm.expect(alvo).to.not.be.undefined);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/billing/api/billing/cliente/{{clienteCpf}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["billing", "api", "billing", "cliente", "{{clienteCpf}}"]
+            }
+          }
+        },
+        {
+          "name": "1.5 Aprovar orcamento",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/billing/api/billing/orcamento/{{orcamentoId}}/status?novoStatus=APROVADO",
+              "host": ["{{baseUrl}}"],
+              "path": ["billing", "api", "billing", "orcamento", "{{orcamentoId}}", "status"],
+              "query": [{ "key": "novoStatus", "value": "APROVADO" }]
+            },
+            "description": "Publica budget-approved; o OS Service avanca a OS para APROVADA."
+          }
+        },
+        {
+          "name": "1.6 Criar checkout",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/billing/api/billing/orcamento/{{orcamentoId}}/checkout",
+              "host": ["{{baseUrl}}"],
+              "path": ["billing", "api", "billing", "orcamento", "{{orcamentoId}}", "checkout"]
+            },
+            "description": "Com PAGAMENTO_PROVIDER=mercadopago cria a preferencia real no Checkout Pro e devolve init_point/sandbox_init_point. Com mock devolve uma preferencia ficticia. No sandbox real, pague pelo init_point e aguarde o webhook; o passo 1.7 so funciona com mock."
+          }
+        },
+        {
+          "name": "1.7 Simular pagamento aprovado (somente mock)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/billing/api/billing/orcamento/{{orcamentoId}}/simular-pagamento?aprovado=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["billing", "api", "billing", "orcamento", "{{orcamentoId}}", "simular-pagamento"],
+              "query": [{ "key": "aprovado", "value": "true" }]
+            },
+            "description": "Somente com PAGAMENTO_PROVIDER=mock. Publica payment-completed. O OS Service marca PAGA e publica execution-requested."
+          }
+        },
+        {
+          "name": "1.8 OS apos pagamento (PAGA/EXECUCAO)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('OS em PAGA ou EXECUCAO', () => pm.expect(['PAGA','EXECUCAO']).to.include(body.status));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/os/api/os/{{osId}}", "host": ["{{baseUrl}}"], "path": ["os", "api", "os", "{{osId}}"] }
+          }
+        },
+        {
+          "name": "1.9 Execucoes em DIAGNOSTICO",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const lista = pm.response.json();",
+                  "const alvo = lista.filter(e => e.osNumero === pm.collectionVariables.get('osNumero')).pop();",
+                  "pm.collectionVariables.set('execucaoId', alvo.id);",
+                  "pm.test('execucao criada pela saga', () => pm.expect(alvo).to.not.be.undefined);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/execution/api/execution/status/DIAGNOSTICO",
+              "host": ["{{baseUrl}}"],
+              "path": ["execution", "api", "execution", "status", "DIAGNOSTICO"]
+            }
+          }
+        },
+        {
+          "name": "1.10 Registrar pecas",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/execution/api/execution/{{execucaoId}}/pecas?pecas=Filtro de oleo",
+              "host": ["{{baseUrl}}"],
+              "path": ["execution", "api", "execution", "{{execucaoId}}", "pecas"],
+              "query": [{ "key": "pecas", "value": "Filtro de oleo" }]
+            }
+          }
+        },
+        {
+          "name": "1.11 Finalizar execucao",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/execution/api/execution/{{execucaoId}}/finalizar",
+              "host": ["{{baseUrl}}"],
+              "path": ["execution", "api", "execution", "{{execucaoId}}", "finalizar"]
+            },
+            "description": "Publica order-finalized. O OS Service marca CONCLUIDA e encerra a saga."
+          }
+        },
+        {
+          "name": "1.12 Finalizar OS",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/os/api/os/{{osId}}/status?novoStatus=FINALIZADA",
+              "host": ["{{baseUrl}}"],
+              "path": ["os", "api", "os", "{{osId}}", "status"],
+              "query": [{ "key": "novoStatus", "value": "FINALIZADA" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Compensacao",
+      "item": [
+        {
+          "name": "2.1 Criar OS para compensacao",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('osIdComp', body.id);",
+                  "pm.collectionVariables.set('osNumeroComp', body.numeroOS);",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/os/api/os?clienteCpf={{clienteCpf}}&descricao=Compensacao por rejeicao",
+              "host": ["{{baseUrl}}"],
+              "path": ["os", "api", "os"],
+              "query": [
+                { "key": "clienteCpf", "value": "{{clienteCpf}}" },
+                { "key": "descricao", "value": "Compensacao por rejeicao" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "2.2 Buscar orcamento da compensacao",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const lista = pm.response.json();",
+                  "const alvo = lista.filter(o => o.osId === pm.collectionVariables.get('osIdComp')).pop();",
+                  "pm.collectionVariables.set('orcamentoIdComp', alvo.id);",
+                  "pm.test('orcamento encontrado', () => pm.expect(alvo).to.not.be.undefined);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/billing/api/billing/cliente/{{clienteCpf}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["billing", "api", "billing", "cliente", "{{clienteCpf}}"]
+            }
+          }
+        },
+        {
+          "name": "2.3 Rejeitar orcamento (dispara compensacao)",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/billing/api/billing/orcamento/{{orcamentoIdComp}}/status?novoStatus=REJEITADO",
+              "host": ["{{baseUrl}}"],
+              "path": ["billing", "api", "billing", "orcamento", "{{orcamentoIdComp}}", "status"],
+              "query": [{ "key": "novoStatus", "value": "REJEITADO" }]
+            },
+            "description": "Publica budget-rejected. O OS Service cancela a OS e publica compensate-budget, compensate-execution e saga-compensated."
+          }
+        },
+        {
+          "name": "2.4 OS compensada (CANCELADA)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('OS CANCELADA', () => pm.expect(body.status).to.eql('CANCELADA'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/os/api/os/{{osIdComp}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["os", "api", "os", "{{osIdComp}}"]
+            }
+          }
+        },
+        {
+          "name": "2.5 Orcamento compensado (CANCELADO)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('orcamento CANCELADO', () => pm.expect(body.status).to.eql('CANCELADO'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/billing/api/billing/orcamento/{{orcamentoIdComp}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["billing", "api", "billing", "orcamento", "{{orcamentoIdComp}}"]
+            }
+          }
+        },
+        {
+          "name": "2.6 Criar OS para pagamento recusado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('osIdPgto', body.id);",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/os/api/os?clienteCpf={{clienteCpf}}&descricao=Compensacao por pagamento recusado",
+              "host": ["{{baseUrl}}"],
+              "path": ["os", "api", "os"],
+              "query": [
+                { "key": "clienteCpf", "value": "{{clienteCpf}}" },
+                { "key": "descricao", "value": "Compensacao por pagamento recusado" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "2.7 Buscar orcamento do pagamento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const lista = pm.response.json();",
+                  "const alvo = lista.filter(o => o.osId === pm.collectionVariables.get('osIdPgto')).pop();",
+                  "pm.collectionVariables.set('orcamentoIdPgto', alvo.id);",
+                  "pm.test('orcamento encontrado', () => pm.expect(alvo).to.not.be.undefined);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/billing/api/billing/cliente/{{clienteCpf}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["billing", "api", "billing", "cliente", "{{clienteCpf}}"]
+            }
+          }
+        },
+        {
+          "name": "2.8 Aprovar orcamento",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/billing/api/billing/orcamento/{{orcamentoIdPgto}}/status?novoStatus=APROVADO",
+              "host": ["{{baseUrl}}"],
+              "path": ["billing", "api", "billing", "orcamento", "{{orcamentoIdPgto}}", "status"],
+              "query": [{ "key": "novoStatus", "value": "APROVADO" }]
+            }
+          }
+        },
+        {
+          "name": "2.9 Simular pagamento recusado (somente mock)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/billing/api/billing/orcamento/{{orcamentoIdPgto}}/simular-pagamento?aprovado=false",
+              "host": ["{{baseUrl}}"],
+              "path": ["billing", "api", "billing", "orcamento", "{{orcamentoIdPgto}}", "simular-pagamento"],
+              "query": [{ "key": "aprovado", "value": "false" }]
+            },
+            "description": "Somente com PAGAMENTO_PROVIDER=mock. Publica payment-failed. A saga compensa a OS e o orcamento."
+          }
+        },
+        {
+          "name": "2.10 OS compensada por pagamento (CANCELADA)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('OS CANCELADA', () => pm.expect(body.status).to.eql('CANCELADA'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/os/api/os/{{osIdPgto}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["os", "api", "os", "{{osIdPgto}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Observabilidade",
+      "item": [
+        {
+          "name": "Prometheus - targets",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/prometheus/api/v1/targets", "host": ["{{baseUrl}}"], "path": ["prometheus", "api", "v1", "targets"] }
+          }
+        },
+        {
+          "name": "Prometheus - requisicoes por servico",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/prometheus/api/v1/query?query=sum(rate(http_server_requests_seconds_count[5m])) by (job)",
+              "host": ["{{baseUrl}}"],
+              "path": ["prometheus", "api", "v1", "query"],
+              "query": [{ "key": "query", "value": "sum(rate(http_server_requests_seconds_count[5m])) by (job)" }]
+            }
+          }
+        },
+        {
+          "name": "Zipkin - servicos com traces",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/zipkin/api/v2/services", "host": ["{{baseUrl}}"], "path": ["zipkin", "api", "v2", "services"] }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "osId", "value": "" },
+    { "key": "osNumero", "value": "" },
+    { "key": "sagaId", "value": "" },
+    { "key": "orcamentoId", "value": "" },
+    { "key": "execucaoId", "value": "" },
+    { "key": "osIdComp", "value": "" },
+    { "key": "osNumeroComp", "value": "" },
+    { "key": "orcamentoIdComp", "value": "" },
+    { "key": "osIdPgto", "value": "" },
+    { "key": "orcamentoIdPgto", "value": "" }
+  ]
+}

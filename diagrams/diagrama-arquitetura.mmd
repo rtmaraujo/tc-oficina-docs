@@ -1,0 +1,58 @@
+%%{init: {"themeVariables": {"fontSize": "20px", "fontFamily": "Segoe UI, Arial, sans-serif"}}}%%
+flowchart TB
+  C([Cliente / Postman])
+
+  subgraph K8S["Cluster k3s - AWS us-west-2"]
+    direction TB
+    T["Traefik<br/>/os  /billing  /execution  /webhook"]
+
+    subgraph APPS["Microsservicos"]
+      direction LR
+      subgraph OS["oficina-os"]
+        OSS["OS Service<br/>SagaOrchestrator<br/>:8081"]
+        OSDB[("PostgreSQL<br/>oficina_os")]
+      end
+      subgraph BIL["oficina-billing"]
+        BILS["Billing Service<br/>PaymentGateway<br/>:8082"]
+        BILDB[("PostgreSQL<br/>oficina_billing")]
+      end
+      subgraph EXE["oficina-execution"]
+        EXES["Execution Service<br/>:8083"]
+        EXEDB[("MongoDB<br/>oficina_execution")]
+      end
+    end
+
+    KAF[["Kafka KRaft + DLT"]]
+
+    subgraph MON["monitoring"]
+      direction LR
+      PROM["Prometheus"]
+      GRAF["Grafana"]
+      ZIP["Zipkin"]
+    end
+  end
+
+  MP[["Mercado Pago<br/>Sandbox / mock"]]
+
+  C --> T
+  T --> OSS
+  T --> BILS
+  T --> EXES
+
+  OSS --- OSDB
+  BILS --- BILDB
+  EXES --- EXEDB
+
+  OSS ---|eventos| KAF
+  BILS ---|eventos| KAF
+  EXES ---|eventos| KAF
+
+  BILS -->|checkout / webhook| MP
+
+  OSS -.->|traces| ZIP
+  BILS -.->|traces| ZIP
+  EXES -.->|traces| ZIP
+  PROM -.->|scrape| OSS
+  PROM -.->|scrape| BILS
+  PROM -.->|scrape| EXES
+  GRAF --> PROM
