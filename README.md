@@ -7,6 +7,7 @@ Cada serviço é um **repositório Git próprio**, com banco, Dockerfile, manife
 - **Participante:** Marcos da Paz Araujo
 - **Ambiente publicado:** `http://44.253.115.185`
 - **Relatório:** [RELATORIO.md](RELATORIO.md) ([PDF](RELATORIO.pdf))
+- **Vídeo de demonstração:** https://youtu.be/Cp_my8VnOtY
 - **Arquitetura e diagramas:** [ARQUITETURA.md](ARQUITETURA.md)
 - **Relatório de vulnerabilidades:** [relatorio_vulnerabilidade.md](relatorio_vulnerabilidade.md)
 - **Postman:** [postman/](postman/)

@@ -6,7 +6,7 @@
 | Repositórios | `tc-oficina-os-service`, `tc-oficina-billing-service`, `tc-oficina-execution-service` |
 | Organização SonarCloud | `rtmaraujo` |
 | Ambiente publicado | `http://44.253.115.185` |
-| Data da entrega | 03/11/2026 |
+| Data da entrega | 05/11/2026 |
 
 ## 1. Links da entrega
 
@@ -19,7 +19,7 @@
 | SonarCloud — Billing | https://sonarcloud.io/project/overview?id=rtmaraujo_tc-oficina-billing-service |
 | SonarCloud — Execution | https://sonarcloud.io/project/overview?id=rtmaraujo_tc-oficina-execution-service |
 | Ambiente publicado | http://44.253.115.185 |
-| Vídeo de demonstração | _a preencher após a gravação (YouTube/Vimeo, até 15 min)_ |
+| Vídeo de demonstração | https://youtu.be/Cp_my8VnOtY |
 
 ---
 
@@ -215,13 +215,13 @@ Cada repositório tem `.github/workflows/ci.yml` com:
 3. Análise SonarCloud com `-Dsonar.qualitygate.wait=true`.
 4. Em push na `main`: build/push da imagem com a tag do commit no ECR e deploy no k3s (`kubectl set image` + `rollout status`).
 
-A `main` exige PR e o check **Build, testes, cobertura e SonarCloud** aprovado. As três entregas desta fase entraram por PR (#7 no OS, #6 no Billing, #6 no Execution), com checks verdes e squash merge.
+A `main` exige PR e o check **Build, testes, cobertura e SonarCloud** aprovado. As entregas de código entraram por PR (#7 no OS, #7 no Billing, #6 no Execution) e as atualizações de documentação por PR (#8 no OS, #8 no Billing, #7 no Execution), todas com checks verdes e squash merge.
 
 | Serviço | Run do merge | Réplicas | Imagem em produção |
 |---|---|---|---|
-| OS | success (1m13s) | 2/2 | `5107ded62342…` |
-| Billing | success (1m14s) | 2/2 | `fb9024eb88a9…` |
-| Execution | success (3m06s) | 2/2 | `c493033e6bd7…` |
+| OS | success | 2/2 | `66e8d36…` |
+| Billing | success | 2/2 | `16f2f9d…` |
+| Execution | success | 2/2 | `ffb15ca…` |
 
 ---
 
@@ -300,11 +300,11 @@ Job de evidência (namespace `oficina-os`), saída completa em [`evidencias/saga
 | 2 | Zipkin em `CrashLoopBackOff` | `OOMKilled` (limite de 192Mi) | Limite elevado para 512Mi e `ZIPKIN_UI_BASEPATH` corrigido |
 | 3 | `/prometheus` retornava 404 | Faltava `IngressRoute` + `stripPrefix` | Middleware `strip-prometheus-prefix` adicionado |
 | 4 | Painéis do Grafana vazios | Queries agrupavam por `application`, label inexistente | Reescritas para `job` |
-| 5 | **OS travava em `APROVADA` após o pagamento** | `CHECK constraint ordem_servico_status_check` sem `PAGA` → rollback + retry infinito do `payment-completed` | Constraint recriada via Job (`infra/sql/fix-os-status-constraint.yaml`); billing validado no mesmo formato |
+| 5 | **OS travava em `APROVADA` após o pagamento** | `CHECK constraint ordem_servico_status_check` sem `PAGA` → rollback + retry infinito do `payment-completed` | Constraint recriada via Job aplicado no cluster; billing validado no mesmo formato |
 | 6 | Filtro de orçamento no PowerShell retornava array | Endpoint por cliente devolve vários registros | Filtro por `sagaId`/`osId` na automação |
 | 7 | `kubectl apply` com timeout e SSH `Broken pipe` | Pressão de memória do nó | Aplicação serializada + `Start-Sleep` entre etapas |
 
-O item 5 é o achado mais relevante: um **bug real de integração** que só apareceu no fluxo ponta a ponta, com a saga aparentando sucesso e a OS presa em `APROVADA`. Foi diagnosticado pelos logs (`violates check constraint`) e corrigido no banco, mantendo o histórico de migração versionado em `infra/sql/`.
+O item 5 é o achado mais relevante: um **bug real de integração** que só apareceu no fluxo ponta a ponta, com a saga aparentando sucesso e a OS presa em `APROVADA`. Foi diagnosticado pelos logs (`violates check constraint`) e corrigido no banco, mantendo o histórico de migração junto à infraestrutura (fora deste repositório de documentação).
 
 ---
 
@@ -327,6 +327,6 @@ A Fase 4 entrega os três microsserviços independentes, a Saga orquestrada com 
 ## Anexos
 
 - [`ARQUITETURA.md`](./ARQUITETURA.md) — diagramas e decisões técnicas
-- [`ROTEIRO-VIDEO.md`](./ROTEIRO-VIDEO.md) — roteiro da demonstração em vídeo
+- [`Vídeo de demonstração`](https://youtu.be/Cp_my8VnOtY) — overview da aplicação
 - `postman/Tech-Challenge-Fase4.postman_collection.json` — coleção executável
-- `infra/` — Kafka, monitoring, SQL de correção/evidência e Terraform
+- Manifests de infraestrutura (Kafka, monitoring, SQL e Terraform) — mantidos no ambiente de execução; não versionados neste repositório
