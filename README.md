@@ -5,7 +5,7 @@ Sistema da oficina mecânica implementado como **três microsserviços independe
 Cada serviço é um **repositório Git próprio**, com banco, Dockerfile, manifestos Kubernetes e pipeline de CI/CD independentes. Este repositório concentra apenas a **documentação da entrega**.
 
 - **Participante:** Marcos da Paz Araujo — RM370971 — Discord `_marcosaraujo`
-- **Ambiente publicado:** `http://44.253.115.185`
+- **Ambiente publicado:** `http://44.253.115.185` (laboratório AWS Academy com credenciais temporárias; pode estar desligado)
 - **Relatório:** [RELATORIO.md](RELATORIO.md) ([PDF](RELATORIO.pdf) · [PDF para o portal](marcos_araujo_rm370971.pdf))
 - **Versão longa:** [RELATORIO-COMPLETO.md](RELATORIO-COMPLETO.md) ([PDF](RELATORIO-COMPLETO.pdf))
 - **Vídeo de demonstração:** https://youtu.be/Cp_my8VnOtY

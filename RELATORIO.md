@@ -19,6 +19,8 @@
 | Documentação | <https://github.com/rtmaraujo/tc-oficina-docs> |
 | Vídeo de demonstração | <https://youtu.be/Cp_my8VnOtY> |
 
+O ambiente roda em laboratório **AWS Academy**, com credenciais temporárias. Quando o laboratório está desligado, as evidências ficam no vídeo e em `evidencias/saga-evidence-2026-11-03.txt`.
+
 Cada serviço carrega a própria infraestrutura: `k8s/` (namespace, deployment, service, IngressRoute, configmap e secret), `Dockerfile`, pipeline e banco. O Execution versiona também o StatefulSet do MongoDB em `k8s/mongodb.yaml`.
 
 **Resumo técnico.** Três serviços em Java 17 com Spring Boot 3.2, integrados por REST e Kafka. PostgreSQL 15 no OS e no Billing, MongoDB 7 no Execution. Pagamento pelo Mercado Pago Checkout Pro. 200 testes, cobertura acima de 90% em linha e SonarCloud com Quality Gate. Deploy em k3s na AWS, com Prometheus, Grafana e Zipkin. O quadro completo está na seção 5.
