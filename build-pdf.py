@@ -5,11 +5,14 @@ Uso:
     py docs/build-pdf.py
 
 Requisitos: `markdown` (pip install markdown) e Microsoft Edge instalado.
-O script escreve docs/_relatorio.html e docs/RELATORIO-FASE4.pdf.
+O script escreve `_relatorio.html`, `RELATORIO.pdf` e a copia
+`marcos_araujo_rm370971.pdf` pronta para envio no portal.
 """
 
 from pathlib import Path
 import os
+import re
+import shutil
 import subprocess
 import sys
 
@@ -19,6 +22,7 @@ DOCS = Path(__file__).resolve().parent
 ORIGEM = DOCS / "RELATORIO.md"
 HTML = DOCS / "_relatorio.html"
 PDF = DOCS / "RELATORIO.pdf"
+PDF_ENTREGA = DOCS / "marcos_araujo_rm370971.pdf"
 
 EDGE_CANDIDATOS = [
     r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
@@ -67,8 +71,9 @@ table {
   border-collapse: collapse;
   margin: 12px 0 16px 0;
   font-size: 9pt;
-  page-break-inside: avoid;
+  page-break-inside: auto;
 }
+tr { page-break-inside: avoid; }
 th {
   background: #0b3d62;
   color: #ffffff;
@@ -117,10 +122,11 @@ img { max-width: 100%; height: auto; }
 p img {
   display: block;
   margin: 14px auto 8px auto;
-  max-height: 228mm;
+  max-height: 185mm;
   border: 1px solid #d5dde5;
   border-radius: 4px;
 }
+.page-break { page-break-before: always; height: 0; }
 hr { border: none; border-top: 1px solid #d5dde5; margin: 22px 0; }
 .capa {
   text-align: center;
@@ -141,7 +147,7 @@ hr { border: none; border-top: 1px solid #d5dde5; margin: 22px 0; }
 }
 .capa .sub { color: #52606d; font-size: 11pt; margin-top: 4px; }
 .capa .meta { color: #7b8794; font-size: 9.5pt; margin-top: 14px; }
-h2, table, pre { page-break-inside: avoid; }
+h2, pre { page-break-inside: avoid; }
 """
 
 CAPA = """
@@ -151,7 +157,10 @@ CAPA = """
   <div style="font-size:10.5pt;color:#7b8794;margin-top:6px;">
     Saga orquestrada &middot; Kafka &middot; Kubernetes &middot; Observabilidade
   </div>
-  <div class="meta">Marcos da Paz Araujo &mdash; 03/11/2026</div>
+  <div class="meta">
+    Grupo <strong>Commit Sem Volta</strong> &middot; Marcos da Paz Araujo &middot; RM370971 &middot; <em>_marcosaraujo</em><br/>
+    Entrega 05/11/2026 &middot; Vers&atilde;o corrigida 16/11/2026
+  </div>
 </div>
 """
 
@@ -177,6 +186,18 @@ def main() -> int:
         extensions=["extra", "tables", "fenced_code", "sane_lists", "toc"],
         output_format="html5",
     )
+
+    # No PDF, links relativos devem apontar para o GitHub (e nao para o disco local).
+    base = "https://github.com/rtmaraujo/tc-oficina-docs/blob/main/"
+
+    def absolutizar(match: re.Match) -> str:
+        alvo = match.group(1)
+        if alvo.startswith(("http://", "https://", "#", "mailto:")):
+            return match.group(0)
+        alvo = alvo.lstrip("./")
+        return f'href="{base}{alvo}"'
+
+    corpo = re.sub(r'href="([^"]+)"', absolutizar, corpo)
 
     html = f"""<!DOCTYPE html>
 <html lang="pt-BR">
@@ -211,6 +232,8 @@ def main() -> int:
         return 1
 
     print(f"PDF gerado: {PDF} ({PDF.stat().st_size // 1024} KB)")
+    shutil.copyfile(PDF, PDF_ENTREGA)
+    print(f"Copia para o portal: {PDF_ENTREGA} ({PDF_ENTREGA.stat().st_size // 1024} KB)")
     return 0
 
 
