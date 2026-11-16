@@ -17,12 +17,14 @@
 | Billing Service | <https://github.com/rtmaraujo/tc-oficina-billing-service> |
 | Execution Service | <https://github.com/rtmaraujo/tc-oficina-execution-service> |
 | Documentação | <https://github.com/rtmaraujo/tc-oficina-docs> |
-| Infraestrutura (Terraform/k3s) | <https://github.com/rtmaraujo/tc-oficina-infra-k8s> |
-| Banco (RDS) | <https://github.com/rtmaraujo/tc-oficina-infra-db> |
-| Autenticação (Lambda) | <https://github.com/rtmaraujo/tc-oficina-lambda> |
+| Infraestrutura Kubernetes/Terraform | <https://github.com/rtmaraujo/tc-oficina-infra-k8s> |
+| Banco relacional (RDS) | <https://github.com/rtmaraujo/tc-oficina-infra-db> |
+| Lambda Auth (autenticação) | <https://github.com/rtmaraujo/tc-oficina-lambda> |
 | Vídeo de demonstração | <https://youtu.be/Cp_my8VnOtY> |
 
 Os três serviços têm repositório, banco, Dockerfile, manifestos Kubernetes e pipeline próprios.
+
+**Resumo técnico.** Três serviços em Java 17 com Spring Boot 3.2, integrados por REST e Kafka. PostgreSQL 15 no OS e no Billing, MongoDB 7 no Execution. Pagamento pelo Mercado Pago Checkout Pro. 200 testes, cobertura acima de 90% em linha e SonarCloud com Quality Gate. Deploy em k3s na AWS, com Prometheus, Grafana e Zipkin. O quadro completo está na seção 5.
 
 <div class="page-break"></div>
 
