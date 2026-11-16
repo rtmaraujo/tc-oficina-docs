@@ -17,12 +17,9 @@
 | Billing Service | <https://github.com/rtmaraujo/tc-oficina-billing-service> |
 | Execution Service | <https://github.com/rtmaraujo/tc-oficina-execution-service> |
 | Documentação | <https://github.com/rtmaraujo/tc-oficina-docs> |
-| Infraestrutura Kubernetes/Terraform | <https://github.com/rtmaraujo/tc-oficina-infra-k8s> |
-| Banco relacional (RDS) | <https://github.com/rtmaraujo/tc-oficina-infra-db> |
-| Lambda Auth (autenticação) | <https://github.com/rtmaraujo/tc-oficina-lambda> |
 | Vídeo de demonstração | <https://youtu.be/Cp_my8VnOtY> |
 
-Os três serviços têm repositório, banco, Dockerfile, manifestos Kubernetes e pipeline próprios.
+Cada serviço carrega a própria infraestrutura: `k8s/` (namespace, deployment, service, IngressRoute, configmap e secret), `Dockerfile`, pipeline e banco. O Execution versiona também o StatefulSet do MongoDB em `k8s/mongodb.yaml`.
 
 **Resumo técnico.** Três serviços em Java 17 com Spring Boot 3.2, integrados por REST e Kafka. PostgreSQL 15 no OS e no Billing, MongoDB 7 no Execution. Pagamento pelo Mercado Pago Checkout Pro. 200 testes, cobertura acima de 90% em linha e SonarCloud com Quality Gate. Deploy em k3s na AWS, com Prometheus, Grafana e Zipkin. O quadro completo está na seção 5.
 
@@ -274,20 +271,23 @@ O `sagaId` vai no MDC dos logs e nos traces, o que permite seguir uma OS pelos t
 
 | Recurso | Detalhe |
 |---|---|
-| Cluster | k3s em EC2, 1 server + 2 workers `t3.small`, VPC `10.0.0.0/16` |
+| Cluster | k3s em EC2, não EKS (1 server + 2 workers `t3.small`), VPC `10.0.0.0/16` |
 | Entrada | Traefik com `IngressRoute` e `stripPrefix` para `/os`, `/billing`, `/execution` e `/webhook` |
 | Mensageria | Kafka KRaft no namespace `oficina-infra`, tópicos e DLT criados por Job |
 | Bancos | 2 instâncias RDS PostgreSQL + MongoDB StatefulSet |
-| Imagens | Amazon ECR `us-west-2` |
 | Observabilidade | namespace `monitoring` com Prometheus, Grafana e Zipkin |
 | IaC | Terraform para ECR e RDS; VPC, EC2 e EIP criados no console |
 
-O cluster é **k3s autogerenciado em EC2**, não EKS. O k3s é uma distribuição Kubernetes, então o requisito de deploy em Kubernetes é atendido.
+### 10.2 Onde está versionado
+
+| Escopo | Onde está |
+|---|---|
+| Manifestos | `k8s/` de cada serviço, com deployment (2 réplicas), service, `IngressRoute`, configmap e secret, além do `Dockerfile` e do pipeline |
+| Banco | Um por serviço: `oficina_os` e `oficina_billing` no RDS, MongoDB do Execution em StatefulSet |
+| Compartilhado | Terraform de ECR/RDS, Kafka e monitoring ficam no ambiente do projeto |
 
 ## 11. Conclusão
 
-A Fase 4 saiu do monolito para três serviços independentes, cada um com repositório, banco, pipeline e deploy próprios. A integração ficou em duas vias: REST para o que precisa de resposta imediata e Kafka para o fluxo longo.
+A Fase 4 saiu do monolito para três serviços independentes, cada um com repositório, banco, pipeline e deploy próprios, integrados por REST e Kafka.
 
-A consistência do processo distribuído é feita por uma saga orquestrada no OS Service, com estado registrado passo a passo, compensação nos quatro casos de falha, idempotência por `eventId` e DLT por tópico. O caminho está coberto por 200 testes, BDD do fluxo completo, cobertura acima de 80% em todos os serviços e Quality Gate aprovado no SonarCloud.
-
-O deploy roda no k3s com Traefik, ECR e RDS, e a operação é acompanhada por Prometheus, Grafana e Zipkin. O fluxo feliz e os dois cenários de compensação foram executados no ambiente publicado, com o histórico registrado no banco e disponível em `evidencias/saga-evidence-2026-11-03.txt`.
+A consistência do processo distribuído fica com uma saga orquestrada no OS Service: estado registrado passo a passo, compensação nos quatro casos de falha, idempotência por `eventId` e DLT por tópico. São 200 testes, BDD do fluxo completo, cobertura acima de 80% em todos os serviços e Quality Gate aprovado, com o fluxo feliz e as duas compensações executados no ambiente publicado.
