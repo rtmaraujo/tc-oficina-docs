@@ -203,7 +203,7 @@ CAPA_PRINCIPAL = {
     "meta": (
         "Grupo <strong>Commit Sem Volta</strong> &middot; Marcos da Paz Araujo "
         "&middot; RM370971 &middot; <em>_marcosaraujo</em><br/>\n    "
-        "Entrega 05/11/2026"
+        "Entrega 05/11/2026 &middot; Atualiza&ccedil;&atilde;o 16/11/2026"
     ),
 }
 
