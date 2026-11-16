@@ -7,6 +7,7 @@ Cada serviço é um **repositório Git próprio**, com banco, Dockerfile, manife
 - **Participante:** Marcos da Paz Araujo — RM370971 — Discord `_marcosaraujo`
 - **Ambiente publicado:** `http://44.253.115.185`
 - **Relatório:** [RELATORIO.md](RELATORIO.md) ([PDF](RELATORIO.pdf) · [PDF para o portal](marcos_araujo_rm370971.pdf))
+- **Versão longa:** [RELATORIO-COMPLETO.md](RELATORIO-COMPLETO.md) ([PDF](RELATORIO-COMPLETO.pdf))
 - **Vídeo de demonstração:** https://youtu.be/Cp_my8VnOtY
 - **Arquitetura e diagramas:** [ARQUITETURA.md](ARQUITETURA.md)
 - **Relatório de vulnerabilidades:** [relatorio_vulnerabilidade.md](relatorio_vulnerabilidade.md)
@@ -205,7 +206,7 @@ Dashboard provisionado: **Oficina Fase 4 - Microsservicos** (requisições/s, p9
 ## Evidências
 
 - [Evidência SQL da Saga](evidencias/saga-evidence-2026-11-03.txt): 10 sagas, 44 passos e eventos dos 7 tópicos consumidos.
-- Fluxo feliz, compensação por orçamento rejeitado e compensação por pagamento recusado detalhados no [relatório](RELATORIO.md#12-evidências-dos-fluxos-executados).
+- Fluxo feliz, compensação por orçamento rejeitado e compensação por pagamento recusado detalhados na [versão longa do relatório](RELATORIO-COMPLETO.md#12-evidências-dos-fluxos-executados).
 
 ## Como executar
 
@@ -245,6 +246,8 @@ tc-oficina-docs/
 ├── RELATORIO.md
 ├── RELATORIO.pdf
 ├── marcos_araujo_rm370971.pdf
+├── RELATORIO-COMPLETO.md
+├── RELATORIO-COMPLETO.pdf
 ├── ARQUITETURA.md
 ├── relatorio_vulnerabilidade.md
 ├── build-pdf.py

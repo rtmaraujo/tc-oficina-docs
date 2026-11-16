@@ -2,14 +2,16 @@
 Gera o PDF do relatorio da Fase 4 a partir do Markdown.
 
 Uso:
-    py docs/build-pdf.py
+    py build-pdf.py                   # relatorio principal (entrega)
+    py build-pdf.py --variante completo  # versao longa, arquivada
 
 Requisitos: `markdown` (pip install markdown) e Microsoft Edge instalado.
-O script escreve `_relatorio.html`, `RELATORIO.pdf` e a copia
+O perfil principal escreve `_relatorio.html`, `RELATORIO.pdf` e a copia
 `marcos_araujo_rm370971.pdf` pronta para envio no portal.
 """
 
 from pathlib import Path
+import argparse
 import os
 import re
 import shutil
@@ -19,10 +21,32 @@ import sys
 import markdown
 
 DOCS = Path(__file__).resolve().parent
-ORIGEM = DOCS / "RELATORIO.md"
-HTML = DOCS / "_relatorio.html"
-PDF = DOCS / "RELATORIO.pdf"
-PDF_ENTREGA = DOCS / "marcos_araujo_rm370971.pdf"
+
+# As tabelas do relatorio principal sao curtas: manter inteiras evita quebra feia.
+CSS_TABELAS_INTEIRAS = (
+    "table { page-break-inside: avoid; font-size: 8.9pt; }"
+    " td { padding: 5px 8px; } th { padding: 6px 8px; }"
+    " ul, ol { page-break-inside: avoid; }"
+)
+
+PERFIS = {
+    "principal": {
+        "origem": "RELATORIO.md",
+        "html": "_relatorio.html",
+        "pdf": "RELATORIO.pdf",
+        "copia": "marcos_araujo_rm370971.pdf",
+        "css_extra": CSS_TABELAS_INTEIRAS,
+        "capa": "principal",
+    },
+    "completo": {
+        "origem": "RELATORIO-COMPLETO.md",
+        "html": "_relatorio-completo.html",
+        "pdf": "RELATORIO-COMPLETO.pdf",
+        "copia": None,
+        "css_extra": "",
+        "capa": "completo",
+    },
+}
 
 EDGE_CANDIDATOS = [
     r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
@@ -61,6 +85,12 @@ h3 {
   color: #16506e;
   margin-top: 18px;
   margin-bottom: 6px;
+  page-break-after: avoid;
+}
+h4 {
+  font-size: 10.5pt;
+  color: #1f2933;
+  margin: 12px 0 4px 0;
   page-break-after: avoid;
 }
 p { margin: 7px 0; text-align: justify; }
@@ -154,15 +184,30 @@ CAPA = """
 <div class="capa">
   <div class="tag">Tech Challenge &middot; Fase 4</div>
   <div style="font-size:13pt;color:#52606d;">Oficina Mec&acirc;nica &mdash; Microsservi&ccedil;os</div>
-  <div style="font-size:10.5pt;color:#7b8794;margin-top:6px;">
-    Saga orquestrada &middot; Kafka &middot; Kubernetes &middot; Observabilidade
-  </div>
-  <div class="meta">
-    Grupo <strong>Commit Sem Volta</strong> &middot; Marcos da Paz Araujo &middot; RM370971 &middot; <em>_marcosaraujo</em><br/>
-    Entrega 05/11/2026 &middot; Vers&atilde;o corrigida 16/11/2026
-  </div>
+  <div style="font-size:10.5pt;color:#7b8794;margin-top:6px;">{linha}</div>
+  <div class="meta">{meta}</div>
 </div>
 """
+
+CAPA_COMPLETA = {
+    "linha": "Saga orquestrada &middot; Kafka &middot; Kubernetes &middot; Observabilidade",
+    "meta": (
+        "Grupo <strong>Commit Sem Volta</strong> &middot; Marcos da Paz Araujo "
+        "&middot; RM370971 &middot; <em>_marcosaraujo</em><br/>\n    "
+        "Entrega 05/11/2026 &middot; Vers&atilde;o corrigida 16/11/2026"
+    ),
+}
+
+CAPA_PRINCIPAL = {
+    "linha": "Saga orquestrada &middot; Kafka &middot; Kubernetes",
+    "meta": (
+        "Grupo <strong>Commit Sem Volta</strong> &middot; Marcos da Paz Araujo "
+        "&middot; RM370971 &middot; <em>_marcosaraujo</em><br/>\n    "
+        "Entrega 05/11/2026"
+    ),
+}
+
+CAPAS = {"principal": CAPA_PRINCIPAL, "completo": CAPA_COMPLETA}
 
 
 def encontrar_edge() -> str:
@@ -172,8 +217,18 @@ def encontrar_edge() -> str:
     raise SystemExit("Microsoft Edge nao encontrado.")
 
 
-def main() -> int:
-    texto = ORIGEM.read_text(encoding="utf-8")
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description="Gera o PDF do relatorio da Fase 4.")
+    parser.add_argument("--variante", choices=sorted(PERFIS), default="principal")
+    args = parser.parse_args(argv)
+
+    perfil = PERFIS[args.variante]
+    origem = DOCS / perfil["origem"]
+    html_path = DOCS / perfil["html"]
+    pdf_path = DOCS / perfil["pdf"]
+    pdf_entrega = DOCS / perfil["copia"] if perfil["copia"] else None
+
+    texto = origem.read_text(encoding="utf-8")
 
     # O titulo H1 do markdown vira a capa, entao removemos a primeira linha H1.
     linhas = texto.splitlines()
@@ -204,36 +259,37 @@ def main() -> int:
 <head>
 <meta charset="utf-8">
 <title>Relatorio Tech Challenge Fase 4</title>
-<style>{CSS}</style>
+<style>{CSS} {perfil["css_extra"]}</style>
 </head>
 <body>
-{CAPA}
+{CAPA.format(**CAPAS[args.variante])}
 {corpo}
 </body>
 </html>
 """
-    HTML.write_text(html, encoding="utf-8")
+    html_path.write_text(html, encoding="utf-8")
 
     edge = encontrar_edge()
-    perfil = DOCS / "_edge-profile"
+    perfil_edge = DOCS / "_edge-profile"
     cmd = [
         edge,
         "--headless=new",
         "--disable-gpu",
         "--no-first-run",
-        f"--user-data-dir={perfil}",
+        f"--user-data-dir={perfil_edge}",
         "--no-pdf-header-footer",
-        f"--print-to-pdf={PDF}",
-        HTML.as_uri(),
+        f"--print-to-pdf={pdf_path}",
+        html_path.as_uri(),
     ]
     resultado = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
-    if not PDF.exists():
+    if not pdf_path.exists():
         sys.stderr.write(resultado.stdout + "\n" + resultado.stderr + "\n")
         return 1
 
-    print(f"PDF gerado: {PDF} ({PDF.stat().st_size // 1024} KB)")
-    shutil.copyfile(PDF, PDF_ENTREGA)
-    print(f"Copia para o portal: {PDF_ENTREGA} ({PDF_ENTREGA.stat().st_size // 1024} KB)")
+    print(f"PDF gerado: {pdf_path} ({pdf_path.stat().st_size // 1024} KB)")
+    if pdf_entrega:
+        shutil.copyfile(pdf_path, pdf_entrega)
+        print(f"Copia para o portal: {pdf_entrega} ({pdf_entrega.stat().st_size // 1024} KB)")
     return 0
 
 
