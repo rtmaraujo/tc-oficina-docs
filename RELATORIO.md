@@ -30,7 +30,7 @@ Cada serviço carrega a própria infraestrutura: `k8s/` (namespace, deployment, 
 ![Arquitetura: cliente, Traefik, três microsserviços com bancos próprios, Kafka, observabilidade e Mercado Pago](diagrams/diagrama-arquitetura.png)
 
 - **REST:** o cliente entra pelo Traefik, que separa `/os`, `/billing` e `/execution`.
-- **Kafka:** os serviços trocam eventos por tópicos, cada um com o seu `.DLT`.
+- **Kafka:** os serviços trocam eventos por tópicos, cada tópico com consumidor tem o seu `.DLT`.
 - **Bancos:** cada serviço acessa só o próprio banco. A integração é por API ou evento.
 - **Pagamento:** o Billing chama o Mercado Pago (Checkout Pro) e recebe o retorno no webhook.
 
@@ -143,7 +143,7 @@ REST resolve o que precisa de resposta na hora. Kafka evita acoplamento temporal
 | Linguagem | Java 17 com Spring Boot 3.2 |
 | Banco SQL | PostgreSQL 15 no RDS, em duas bases: `oficina_os` e `oficina_billing` |
 | Banco NoSQL | MongoDB 7, base `oficina_execution` |
-| Mensageria | Apache Kafka (KRaft) com um `.DLT` por tópico |
+| Mensageria | Apache Kafka (KRaft) com um `.DLT` por tópico de consumo |
 | Pagamento | Mercado Pago Checkout Pro e webhook com validação HMAC-SHA256 |
 | BDD e cobertura | Cucumber no OS Service; 200 testes (66 + 90 + 44); cobertura de linha de 100%, 99,07% e 98,63% |
 | Qualidade | SonarCloud no pipeline, com Quality Gate obrigatório |
@@ -290,4 +290,4 @@ O `sagaId` vai no MDC dos logs e nos traces, o que permite seguir uma OS pelos t
 
 A Fase 4 saiu do monolito para três serviços independentes, cada um com repositório, banco, pipeline e deploy próprios, integrados por REST e Kafka.
 
-A consistência do processo distribuído fica com uma saga orquestrada no OS Service: estado registrado passo a passo, compensação nos quatro casos de falha, idempotência por `eventId` e DLT por tópico. São 200 testes, BDD do fluxo completo, cobertura acima de 80% em todos os serviços e Quality Gate aprovado, com o fluxo feliz e as duas compensações executados no ambiente publicado.
+A consistência do processo distribuído fica com uma saga orquestrada no OS Service: estado registrado passo a passo, compensação nos quatro casos de falha, idempotência por `eventId` e DLT por tópico de consumo. São 200 testes, BDD do fluxo completo, cobertura acima de 80% em todos os serviços e Quality Gate aprovado, com o fluxo feliz e as duas compensações executados no ambiente publicado.
